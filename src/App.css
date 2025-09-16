@@ -853,6 +853,11 @@ html, body {
     max-width: 1100px;
     margin: 0 auto;
   }
+  /* Align footer text consistently; move brand logo below copy for straight first line */
+  .footer-grid, .footer-col, .footer-brand { text-align: left; }
+  .footer-brand { display: flex; flex-direction: column; align-items: flex-start; }
+  .footer-brand .brand-mark { order: 3; margin-top: 12px; }
+  .footer-socials { order: 2; margin-top: 10px; }
   
   .footer-brand .brand-mark {
     width: 56px;
