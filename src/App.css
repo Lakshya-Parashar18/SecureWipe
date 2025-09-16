@@ -1,3 +1,31 @@
+  /* Left sidebar removed */
+  /* Intro video overlay - centered circular */
+  .intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 1;
+    transition: opacity 400ms ease, visibility 400ms ease;
+  }
+  .intro-overlay.hidden { opacity: 0; visibility: hidden; }
+  .intro-box {
+    width: min(520px, 78vw);
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08) inset;
+    position: relative;
+    transform: scale(1);
+    transition: transform 300ms ease, opacity 300ms ease;
+  }
+  .intro-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .intro-dual-ring { position: absolute; inset: -6px; pointer-events: none; filter: drop-shadow(0 0 10px rgba(96,165,250,0.35)); }
+  /* Progress ring removed */
+  .intro-overlay.hidden .intro-box { transform: scale(1.06); opacity: 0; }
 /* Reset */
 html, body {
     margin: 0;
@@ -70,12 +98,13 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 50px 0 16px; /* nudge brand closer to the left */
     background: rgba(15, 23, 42, 0.7);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid rgba(255,255,255,0.08);
     z-index: 1000;
     transition: top 0.35s ease, background 0.3s ease;
+    overflow: visible; /* prevent CTA clipping at edges */
   }
   .top-nav.show { top: 0; }
   .top-nav .brand {
@@ -84,19 +113,30 @@ html, body {
     letter-spacing: 0.5px;
     text-decoration: none;
   }
+  .top-nav .links {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+  }
   .top-nav .links a {
     color: #e5e7eb;
     text-decoration: none;
-    margin-left: 16px;
     font-weight: 600;
   }
   .top-nav .links a:hover { color: #fff; }
+  .top-nav .links a.active { color: #fff; position: relative; }
+  .top-nav .links a.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; background: linear-gradient(90deg, #60a5fa, #22d3ee, #a78bfa); border-radius: 999px; }
   .top-nav .links .cta {
     background: #2563eb;
     color: #fff;
     padding: 8px 14px;
     border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
   }
+  .top-nav .scroll-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .top-nav .scroll-progress-bar { height: 100%; background: linear-gradient(90deg, #60a5fa, #22d3ee, #a78bfa); box-shadow: 0 0 8px rgba(96,165,250,0.5); transition: width 120ms linear; }
   
   p {
     margin: 0 0 15px;
@@ -236,7 +276,7 @@ html, body {
     background: #2563eb;
     color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: 20px;
     text-decoration: none;
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
     transition: all 0.3s ease;
@@ -284,6 +324,8 @@ html, body {
     font-size: 1.3rem;
     padding: 16px 36px;
   }
+  /* Magnetic effect baseline */
+  .download-btn.magnetic { will-change: transform; transition: transform 140ms ease-out; }
   
   /* Animated SVG running outline */
   .with-outline { overflow: hidden; }
@@ -333,6 +375,8 @@ html, body {
     position: relative; /* for background pattern layers */
     overflow: hidden;
   }
+
+  /* In-section cards removed */
   
   section h2 {
     font-size: 2rem;
@@ -354,6 +398,13 @@ html, body {
     border-radius: 999px;
     background: linear-gradient(90deg, rgba(59,130,246,0), rgba(59,130,246,0.8), rgba(16,185,129,0.8), rgba(236,72,153,0.8), rgba(59,130,246,0));
     filter: saturate(130%);
+    transform-origin: center;
+    transform: translateX(-50%) scaleX(0);
+    transition: transform 600ms ease;
+  }
+  section h2.inview::after { transform: translateX(-50%) scaleX(1); }
+  @media (prefers-reduced-motion: reduce) {
+    section h2::after { transition: none; transform: translateX(-50%) scaleX(1); }
   }
   
   /* Subtle grid pattern and glow accent behind sections */
@@ -417,7 +468,7 @@ html, body {
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease, backdrop-filter 220ms ease;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, backdrop-filter 180ms ease, filter 180ms ease;
     position: relative;
     overflow: hidden;
     z-index: 1; /* establish stacking so hovered card can rise above */
@@ -438,10 +489,11 @@ html, body {
   }
   
   .card:hover {
-    transform: translateY(-12px) scale(1.12);
-    box-shadow: 0 24px 48px rgba(0,0,0,0.5);
-    border-color: rgba(59,130,246,0.35);
-    backdrop-filter: saturate(120%);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 16px 28px rgba(0,0,0,0.38);
+    border-color: rgba(59,130,246,0.28);
+    backdrop-filter: saturate(115%);
+    filter: saturate(105%);
     z-index: 20;
   }
   
@@ -480,11 +532,22 @@ html, body {
     border-radius: 12px;
     background: linear-gradient(180deg, rgba(15,23,42,0.35), rgba(15,23,42,0.2));
     box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, filter 160ms ease;
   }
   
   .benefits-list li:hover {
-    border-color: rgba(59,130,246,0.35);
-    box-shadow: 0 10px 26px rgba(37,99,235,0.18);
+    border-color: rgba(59,130,246,0.3);
+    box-shadow: 0 12px 26px rgba(37,99,235,0.22);
+    transform: translateY(-2px);
+    filter: saturate(105%);
+  }
+
+  /* Respect reduced motion: tamp down transforms */
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease; }
+    .card:hover { transform: none; }
+    .benefits-list li { transition: box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease; }
+    .benefits-list li:hover { transform: none; }
   }
   
   /* Guidelines */
@@ -561,23 +624,35 @@ html, body {
     max-width: 900px;
     margin: 100px auto;
     box-shadow: 0 10px 32px rgba(37,99,235,0.18);
+    text-align: center;
+    display: grid;
+    justify-items: center;
+    row-gap: 14px;
   }
   
   .download-section h2 {
     color: white;
   }
+  .download-section p { text-align: center; }
   
   .checksum {
     font-size: 0.9rem;
     opacity: 0.8;
     margin-top: 15px;
   }
+  /* Removed checksum copy UI */
   
   /* Emphasized black theme for the bottom download button only */
   .download-section .download-btn {
     background: #0b0b0c;
     color: #fff;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    border-radius: 24px;
+    display: inline-block;
+    margin: 20px auto 0;
+    padding: 14px 30px;
+    width: auto;
+    max-width: 360px;
+    box-shadow: 0 08px 24px rgba(0,0,0,0.6);
   }
   .download-section .download-btn:hover {
     background: #000;
@@ -704,6 +779,10 @@ html, body {
   }
   .btn-icon svg { transition: transform 0.2s ease; }
   .btn-icon:hover svg { transform: translateX(2px); }
+
+  /* Remove animated ring from the contact form submit button only */
+  .contact-section .download-btn::before { content: none !important; }
+  .contact-section .download-btn::after { content: none !important; }
   
   .contact-aside { display: grid; gap: 16px; }
   .contact-aside .contact-card { padding: 18px; }
@@ -856,6 +935,26 @@ html, body {
     text-align: center;
     color: #64748b;
   }
+
+  /* Back to top chip */
+  .back-to-top {
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,0.35);
+    background: rgba(15,23,42,0.6);
+    color: #e5e7eb;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 200ms ease, transform 200ms ease;
+    cursor: pointer;
+    z-index: 1100;
+  }
+  .back-to-top.show { opacity: 1; transform: translateY(0); }
+  .back-to-top:hover { box-shadow: 0 12px 26px rgba(0,0,0,0.45); }
   
   @media (min-width: 900px) {
     .footer-grid {
@@ -893,31 +992,7 @@ html, body {
     transition: transform 0.12s ease-out, width 0.2s ease, height 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
   
-  /* Intro video overlay */
-  .intro-overlay {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    opacity: 1;
-    transition: opacity 500ms ease, visibility 500ms ease;
-  }
-  .intro-overlay.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
-  .intro-box {
-    width: min(520px, 80vw);
-    aspect-ratio: 1 / 1;
-    border-radius: 50%;
-    overflow: hidden;
-    box-shadow: 0 20px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08) inset;
-  }
-  .intro-video { width: 100%; height: 100%; object-fit: cover; }
-  /* removed skip button */
+  /* Removed intro overlay */
   .cursor-link {
     width: 36px !important;
     height: 36px !important;
@@ -930,13 +1005,14 @@ html, body {
     position: fixed;
     top: 0;
     left: 0;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 999px;
     pointer-events: none;
     z-index: 9998;
     background: radial-gradient(circle at 50% 50%, rgba(59,130,246,1), rgba(59,130,246,0));
-    filter: blur(2px) saturate(120%);
+    filter: blur(2px) saturate(140%);
+    box-shadow: 0 0 10px rgba(59,130,246,0.55);
     transform: translate3d(-9999px,-9999px,0);
     transition: opacity 0.2s ease;
   }

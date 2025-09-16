@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "sha256": "abc123xyz...",
+  "iso_url": "${ISO_URL}",
+  "published_at": "2025-01-01T00:00:00Z",
+  "notes": [
+    "Initial public release",
+    "Bootable ISO for secure erase"
+  ]
+}
+

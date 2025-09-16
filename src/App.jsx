@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import LocomotiveScroll from "locomotive-scroll";
 import "./App.css";
+import 'locomotive-scroll/dist/locomotive-scroll.css';
+
 
 function App() {
   const cursorRef = useRef(null);
@@ -9,44 +11,63 @@ function App() {
   const scrollRef = useRef(null);
   const locomotiveScrollRef = useRef(null);
   const [showNav, setShowNav] = useState(false);
+  const [backTopVisible, setBackTopVisible] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeSection, setActiveSection] = useState("top");
   const [introVisible, setIntroVisible] = useState(true);
   const [introFade, setIntroFade] = useState(false);
   const [contactToast, setContactToast] = useState("");
+  const videoRef = useRef(null);
+  const [videoStarted, setVideoStarted] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const progressRafRef = useRef(0);
+
 
   useEffect(() => {
-    // Initialize Locomotive Scroll with MAXIMUM smoothness settings
+    if (introVisible) return; // wait for overlay to finish
     locomotiveScrollRef.current = new LocomotiveScroll({
       el: scrollRef.current,
       smooth: true,
-      multiplier: 3.0, // Maximum momentum
+      multiplier: 1.15, // Overall speed scalar for wheel input
       class: 'is-revealed',
       scrollbarContainer: false,
-      lerp: 0.001, // Absolute minimum lerp
+      lerp: 0.08, // Inertia: lower is smoother/longer, higher is tighter
       direction: 'vertical',
       gestureDirection: 'vertical',
       smoothMobile: true,
       smartphone: {
         smooth: true,
-        lerp: 0.001,
-        multiplier: 2.5
+        lerp: 0.1,
+        multiplier: 1.0
       },
       tablet: {
         smooth: true,
-        lerp: 0.001,
-        multiplier: 2.8
+        lerp: 0.1,
+        multiplier: 1.1
       },
       reloadOnResize: true,
-      resetNativeScroll: true,
-      touchMultiplier: 6,
-      firefoxMultiplier: 100,
-      chromeMultiplier: 2.0,
-      safariMultiplier: 1.8
+      resetNativeScroll: false,
+      touchMultiplier: 2.0
     });
 
     // Update nav visibility based on scroll position
     locomotiveScrollRef.current.on('scroll', (instance) => {
       const y = instance.scroll.y;
       setShowNav(y > 120);
+      setBackTopVisible(y > 600);
+      // Progress across page
+      const lim = instance.limit && typeof instance.limit.y === 'number' ? instance.limit.y : document.body.scrollHeight - window.innerHeight;
+      const p = lim > 0 ? Math.min(1, Math.max(0, y / lim)) : 0;
+      setScrollProgress(p);
+      // Active section detection (based on offsetTop)
+      const sections = ["why","benefits","how","download","contact"];
+      const mid = y + window.innerHeight * 0.35;
+      let current = "top";
+      for (let id of sections) {
+        const el = document.getElementById(id);
+        if (el && el.offsetTop <= mid) current = id;
+      }
+      setActiveSection(current);
     });
 
     // Refresh scroll after a short delay to ensure proper initialization
@@ -62,8 +83,100 @@ function App() {
         locomotiveScrollRef.current.destroy();
       }
     };
+  }, [introVisible]);
+
+  // Autoplay overlay video on load with user-interaction fallback
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    // Ensure autoplay prerequisites before loading
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+    videoEl.setAttribute('muted', '');
+    videoEl.setAttribute('playsinline', '');
+
+    const tryPlay = () => {
+      const p = videoEl.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => setVideoStarted(true)).catch(() => {});
+      }
+    };
+
+    // Load, then attempt play on key readiness events
+    try { videoEl.load(); } catch {}
+    const onLoadedMeta = () => tryPlay();
+    const onCanPlay = () => tryPlay();
+    const onLoadedData = () => tryPlay();
+    videoEl.addEventListener('loadedmetadata', onLoadedMeta);
+    videoEl.addEventListener('canplay', onCanPlay);
+    videoEl.addEventListener('loadeddata', onLoadedData);
+    tryPlay();
+
+    // As a fallback, first user interaction will start playback
+    const unlock = () => {
+      if (videoEl.paused) {
+        try { if (videoEl.currentTime === 0) videoEl.currentTime = 0.01; } catch {}
+        const p = videoEl.play();
+        if (p && typeof p.then === 'function') p.then(() => setVideoStarted(true)).catch(() => {});
+      }
+    };
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+
+    // Do NOT auto-hide too quickly; only hide on end or explicit error
+    const hideIfStuck = setTimeout(() => setIntroFade(true), 12000);
+
+    return () => {
+      clearTimeout(hideIfStuck);
+      videoEl.removeEventListener('loadedmetadata', onLoadedMeta);
+      videoEl.removeEventListener('canplay', onCanPlay);
+      videoEl.removeEventListener('loadeddata', onLoadedData);
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
+  // Mark section titles in view to trigger underline reveal
+  useEffect(() => {
+    const headings = Array.from(document.querySelectorAll('section h2'));
+    if (!('IntersectionObserver' in window)) return; // graceful degrade
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const el = entry.target;
+        if (entry.isIntersecting) el.classList.add('inview');
+      });
+    }, { rootMargin: '0px 0px -30% 0px', threshold: 0.1 });
+    headings.forEach(h => io.observe(h));
+    return () => io.disconnect();
+  }, []);
+
+  // Smooth progress animation using requestAnimationFrame with interpolation
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    const tick = () => {
+      if (videoEl.duration && !isNaN(videoEl.duration)) {
+        const target = Math.max(0, Math.min(1, videoEl.currentTime / videoEl.duration));
+        setProgress(prev => prev + (target - prev) * 0.2);
+      }
+      progressRafRef.current = requestAnimationFrame(tick);
+    };
+
+    if (videoStarted && !introFade) {
+      progressRafRef.current = requestAnimationFrame(tick);
+    }
+
+    return () => {
+      if (progressRafRef.current) cancelAnimationFrame(progressRafRef.current);
+      progressRafRef.current = 0;
+    };
+  }, [videoStarted, introFade]);
 
 
+
+  useEffect(() => {
     const cursorEl = cursorRef.current;
     if (!cursorEl) return;
 
@@ -144,7 +257,6 @@ function App() {
     window.addEventListener("mouseup", ensureTick);
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseover", onOver);
       window.removeEventListener("mouseout", onOut);
@@ -155,22 +267,56 @@ function App() {
 
   return (
     <div ref={scrollRef} data-scroll-container className="app">
+      
+      
+      
       {introVisible && (
         <div
-          className={`intro-overlay${introFade ? " hidden" : ""}`}
+          className={`intro-overlay${introFade ? " hidden" : ""}${videoStarted ? " started" : ""}`}
           onTransitionEnd={(e) => {
             if (introFade && e.target === e.currentTarget) setIntroVisible(false);
           }}
         >
           <div className="intro-box">
+            {(() => {
+              const radius = 48;
+              const circumference = 2 * Math.PI * radius;
+              const half = circumference / 2;
+              const seg = Math.max(0, Math.min(half, progress * half));
+              const gap = Math.max(0, half - seg);
+              return (
+                <svg className="intro-dual-ring" viewBox="0 0 100 100" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="dualGradA" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#60a5fa"/>
+                      <stop offset="50%" stopColor="#a78bfa"/>
+                      <stop offset="100%" stopColor="#22d3ee"/>
+                    </linearGradient>
+                    <linearGradient id="dualGradB" x1="1" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#22d3ee"/>
+                      <stop offset="50%" stopColor="#a78bfa"/>
+                      <stop offset="100%" stopColor="#60a5fa"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                  <circle cx="50" cy="50" r={radius} fill="none" stroke="url(#dualGradA)" strokeWidth="1" strokeLinecap="round" style={{ strokeDasharray: `${seg} ${gap}`, strokeDashoffset: 0 }} />
+                  <circle cx="50" cy="50" r={radius} fill="none" stroke="url(#dualGradB)" strokeWidth="1" strokeLinecap="round" transform="rotate(180 50 50)" style={{ strokeDasharray: `${seg} ${gap}`, strokeDashoffset: 0 }} />
+                </svg>
+              );
+            })()}
             <video
+              ref={videoRef}
               className="intro-video"
               src="/intro.mp4"
-              autoPlay
               muted
+              autoPlay
               playsInline
-              onEnded={() => { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); setIntroFade(true); }}
-              onError={() => { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); setIntroFade(true); }}
+              webkit-playsinline="true"
+              x5-playsinline="true"
+              preload="auto"
+              onPlay={() => setVideoStarted(true)}
+              onEnded={() => setIntroFade(true)}
+              onError={() => setIntroFade(true)}
             />
           </div>
         </div>
@@ -179,11 +325,14 @@ function App() {
       <nav className={`top-nav ${showNav ? "show" : ""}`}>
         <a href="#top" className="brand">SecureWipe</a>
         <div className="links">
-          <a href="#why">Why</a>
-          <a href="#benefits">Benefits</a>
-          <a href="#how">Guide</a>
-          <a href="#contact">Contact</a>
-          <a href="#download" className="cta">Download</a>
+          <a href="#why" className={activeSection==="why"?"active":""}>Why</a>
+          <a href="#benefits" className={activeSection==="benefits"?"active":""}>Benefits</a>
+          <a href="#how" className={activeSection==="how"?"active":""}>Guide</a>
+          <a href="#contact" className={activeSection==="contact"?"active":""}>Contact</a>
+          <a href="#download" className={`cta ${activeSection==="download"?"active":""}`}>Download</a>
+        </div>
+        <div className="scroll-progress" aria-hidden="true">
+          <div className="scroll-progress-bar" style={{ width: `${scrollProgress*100}%` }} />
         </div>
       </nav>
       {/* Hero Section */}
@@ -199,7 +348,7 @@ function App() {
             <span className="headline-top">A Universally Trusted Solution for</span><br />
             <span className="headline-bottom">Secure Data Erasure & Device Recycling</span>
           </motion.h1>
-          {/* Animated ornaments behind title */}
+          
           <div className="title-anim" aria-hidden="true">
             <div className="title-rays"></div>
             <span className="orb orb-a"></span>
@@ -216,10 +365,23 @@ function App() {
           Protect your privacy while enabling safe and sustainable e-waste management.
         </motion.p>
         <motion.a
-          href="/securewipe.iso"
-          className="download-btn with-outline"
+          href="/download"
+          className="download-btn with-outline magnetic"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onMouseMove={(e)=>{
+            const el = e.currentTarget;
+            const rect = el.getBoundingClientRect();
+            const cx = rect.left + rect.width/2;
+            const cy = rect.top + rect.height/2;
+            const dx = (e.clientX - cx) / rect.width; // -0.5..0.5 roughly
+            const dy = (e.clientY - cy) / rect.height;
+            const tx = dx * 8;
+            const ty = dy * 8;
+            const rot = dx * -3;
+            el.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
+          }}
+          onMouseLeave={(e)=>{ e.currentTarget.style.transform = "translate(0,0) rotate(0deg)"; }}
         >
           <span>Download ISO</span>
           <svg className="btn-outline" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
@@ -230,7 +392,12 @@ function App() {
                 <stop offset="100%" stopColor="#22d3ee"/>
               </linearGradient>
               <filter id="btnGlowHero" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="1.4" flood-color="#60a5fa" flood-opacity="0.55"/>
+                <feDropShadow
+                 dx="0"
+                 dy="0"
+                 stdDeviation="1.4"
+                {...{ 'floodColor': '#60a5fa', 'floodOpacity': '0.55' }}
+                />
               </filter>
             </defs>
             <rect x="1" y="1" width="98" height="38" rx="12" ry="12" fill="none" stroke="url(#outlineGradHero)" strokeWidth="3" filter="url(#btnGlowHero)" pathLength="100"/>
@@ -245,7 +412,7 @@ function App() {
         </div>
       </header>
 
-      {/* Why Use Section */}
+      {/* Why Use Section (unchanged layout) */}
       <section id="why" data-scroll-section>
         <h2>Why Use SecureWipe?</h2>
         <div className="card-grid">
@@ -286,12 +453,12 @@ function App() {
         <h2>How to Create Your Bootable USB</h2>
         <ol className="guidelines-list">
           {[
-            "⬇️ Download the SecureWipe ISO.",
-            "🖴 Insert a USB (8GB+).",
-            "⚙️ Use Rufus (Windows) or Etcher (Mac/Linux) to flash.",
-            "🚀 Start flashing process.",
-            "🔄 Reboot PC and boot from USB.",
-            "🧹 Launch SecureWipe and wipe drives.",
+            <>⬇️ Download the SecureWipe ISO.</>,
+            <>🖴 Insert a USB (8GB+).</>,
+            <>⚙️ Use <a href="https://rufus.ie/" target="_blank" rel="noreferrer">Rufus</a> (Windows) or <a href="https://etcher.balena.io/" target="_blank" rel="noreferrer">Etcher</a> (Mac/Linux) to flash.</>,
+            <>🚀 Start flashing process.</>,
+            <>🔄 Reboot PC and boot from USB.</>,
+            <>🧹 Launch SecureWipe and wipe drives.</>,
           ].map((step, index) => (
             <motion.li
               key={index}
@@ -317,7 +484,7 @@ function App() {
         </motion.h2>
         <p>Get the latest version below:</p>
         <motion.a
-          href="/securewipe.iso"
+          href="/download"
           className="download-btn big with-outline"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -331,15 +498,18 @@ function App() {
                 <stop offset="100%" stopColor="#22d3ee"/>
               </linearGradient>
               <filter id="btnGlowDl" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="1.6" flood-color="#22d3ee" flood-opacity="0.55"/>
+                <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="1.4"
+                {...{ 'floodColor': '#60a5fa', 'floodOpacity': '0.55' }}
+                />
               </filter>
             </defs>
             <rect x="1" y="1" width="98" height="38" rx="12" ry="12" fill="none" stroke="url(#outlineGradDl)" strokeWidth="3" filter="url(#btnGlowDl)" pathLength="100"/>
           </svg>
         </motion.a>
-        <p className="checksum">
-          Version 1.0 | SHA256: abc123xyz...
-        </p>
+        <p className="checksum">Version 1.0 | SHA256: abc123xyz...</p>
       </section>
 
       {/* Contact Section */}
@@ -355,11 +525,37 @@ function App() {
         <div className="contact-grid">
           <form
             className="contact-form"
-            onSubmit={(e)=>{
+            onSubmit={async (e)=>{
               e.preventDefault();
-              setContactToast("Thanks! We'll get back to you shortly.");
+              const form = e.currentTarget;
+              const formData = new FormData(form);
+              const payload = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                subject: formData.get('subject'),
+                message: formData.get('message')
+              };
+              const apiBase = (import.meta && import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+              const endpoints = [`${apiBase}/api/contact`, 'http://localhost:8080/api/contact'];
+              let ok = false;
+              for (const url of endpoints){
+                try {
+                  const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  });
+                  if (res.ok) { ok = true; break; }
+                } catch {}
+              }
+              if (ok) {
+                setContactToast("Thanks! We'll get back to you shortly.");
+                form.reset();
+              } else {
+                setContactToast("Could not send message. Please try again later.");
+              }
               setTimeout(()=> setContactToast("") , 3000);
-              e.currentTarget.reset();
             }}
           >
             <div className="form-row">
@@ -420,7 +616,7 @@ function App() {
       </section>
 
       {/* Footer */}
-      <footer className="site-footer" aria-labelledby="footer-heading">
+      <footer className="site-footer" aria-labelledby="footer-heading" data-scroll-section>
         <h2 id="footer-heading" className="sr-only">Footer</h2>
         <div className="footer-grid">
           <div className="footer-brand">
@@ -480,12 +676,21 @@ function App() {
       </footer>
       {/* Custom Cursor */}
       <div ref={cursorRef} className="cursor"></div>
+      {/* Back to top chip */}
+      <button
+        type="button"
+        className={`back-to-top ${backTopVisible ? 'show' : ''}`}
+        aria-label="Back to top"
+        onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })}
+      >
+        ↑ Top
+      </button>
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
           ref={(el) => (trailRefs.current[i] = el)}
           className="cursor-trail"
-          style={{ opacity: i < 2 ? 0 : 0.5 - i * 0.04 }}
+          style={{ opacity: i < 2 ? 0.1 : 0.65 - i * 0.045 }}
         ></div>
       ))}
     </div>
