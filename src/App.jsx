@@ -202,9 +202,9 @@ function App() {
     let targetY = 0;
     let currentX = 0;
     let currentY = 0;
-    const TRAIL_COUNT = 8;
+    const TRAIL_COUNT = 6;
     const trailPositions = Array.from({ length: TRAIL_COUNT }, () => ({ x: 0, y: 0 }));
-    const HISTORY_SIZE = 60;
+    const HISTORY_SIZE = 32;
     const BASE_DELAY = 6; // frames to delay even the first dot
     const STEP_DELAY = 4; // additional frames per dot
     const history = [];
@@ -232,8 +232,8 @@ function App() {
     };
 
     const tick = () => {
-      currentX += (targetX - currentX) * 0.25;
-      currentY += (targetY - currentY) * 0.25;
+      currentX += (targetX - currentX) * 0.35;
+      currentY += (targetY - currentY) * 0.35;
       cursorEl.style.transform = `translate3d(${currentX - 12}px, ${currentY - 12}px, 0)`;
 
       // record history so dots can follow older positions (always behind)
@@ -246,8 +246,8 @@ function App() {
         const pos = trailPositions[i];
         const historyIndex = Math.min(BASE_DELAY + i * STEP_DELAY, history.length - 1);
         const target = history[historyIndex] || { x: currentX, y: currentY };
-        const lerp = 0.18 - i * 0.015; // keep dots slower to avoid catching up
-        const factor = lerp > 0.07 ? lerp : 0.07;
+        const lerp = 0.22 - i * 0.02; // slightly snappier trail
+        const factor = lerp > 0.08 ? lerp : 0.08;
         pos.x += (target.x - pos.x) * factor;
         pos.y += (target.y - pos.y) * factor;
         const el = trailRefs.current[i];
@@ -268,10 +268,10 @@ function App() {
       }
     };
 
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseover", onOver);
-    window.addEventListener("mouseout", onOut);
-    window.addEventListener("mouseup", ensureTick);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseover", onOver, { passive: true });
+    window.addEventListener("mouseout", onOut, { passive: true });
+    window.addEventListener("mouseup", ensureTick, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", onMove);
