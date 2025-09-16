@@ -91,7 +91,7 @@ html, body {
   /* Scroll Nav */
   .top-nav {
     position: fixed;
-    top: -70px;
+    top: 0;
     left: 0;
     right: 0;
     height: 60px;
@@ -103,10 +103,12 @@ html, body {
     backdrop-filter: blur(8px);
     border-bottom: 1px solid rgba(255,255,255,0.08);
     z-index: 1000;
-    transition: top 0.35s ease, background 0.3s ease;
+    transform: translateY(-100%);
+    transition: transform 0.35s ease, background 0.3s ease;
     overflow: visible; /* prevent CTA clipping at edges */
+    will-change: transform;
   }
-  .top-nav.show { top: 0; }
+  .top-nav.show { transform: translateY(0); }
   .top-nav .brand {
     color: #fff;
     font-weight: 800;
@@ -154,7 +156,7 @@ html, body {
     justify-content: center;
     align-items: center;
     text-align: center;
-    padding: 0 20px;
+    padding: 0 0px;
     position: relative;
     overflow: hidden;
   }
@@ -1029,5 +1031,27 @@ html, body {
       font-size: 1rem;
       padding: 12px 24px;
     }
+  }
+  
+  /* Mobile alignment polish */
+  @media (max-width: 600px) {
+    .top-nav { height: auto; padding: 6px 12px; }
+    .top-nav .links { gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+    .top-nav .links .cta { margin-top: 6px; }
+
+    .hero { padding: 0 0px; }
+    .title-wrap { text-align: center; }
+    .mega-headline { line-height: 1.15; }
+    .tagline { padding: 0 6px; }
+
+    .card-grid { grid-template-columns: 1fr; }
+
+    .download-section { margin: 60px 12px; border-radius: 12px; }
+    .download-section .download-btn { display: inline-block; margin: 16px auto 0; }
+
+    .newsletter-form { flex-direction: column; }
+    .newsletter-form button { width: 100%; }
+
+    .footer-grid { grid-template-columns: 1fr; gap: 20px; }
   }
   

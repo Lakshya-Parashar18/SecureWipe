@@ -77,11 +77,28 @@ function App() {
       }
     }, 100);
 
+    // Delegate nav anchor clicks to LocomotiveScroll to avoid native jump
+    const onNavClick = (e) => {
+      const anchor = e.target.closest && e.target.closest('.top-nav a');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href') || '';
+      if (!href.startsWith('#')) return;
+      e.preventDefault();
+      const target = href === '#top' ? scrollRef.current : document.querySelector(href);
+      if (target && locomotiveScrollRef.current) {
+        try {
+          locomotiveScrollRef.current.scrollTo(target, { duration: 800, disableLerp: false });
+        } catch {}
+      }
+    };
+    document.addEventListener('click', onNavClick);
+
     // Cleanup function
     return () => {
       if (locomotiveScrollRef.current) {
         locomotiveScrollRef.current.destroy();
       }
+      document.removeEventListener('click', onNavClick);
     };
   }, [introVisible]);
 
@@ -267,6 +284,7 @@ function App() {
 
   return (
     <div ref={scrollRef} data-scroll-container className="app">
+      <span id="top" aria-hidden="true"></span>
       
       
       
@@ -362,7 +380,7 @@ function App() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.8 }}
         >
-          Protect your privacy while enabling safe and sustainable e-waste management.
+          Protect your privacy while enabling safe and sustainable e-waste management
         </motion.p>
         <motion.a
           href="/download"
@@ -417,9 +435,9 @@ function App() {
         <h2>Why Use SecureWipe?</h2>
         <div className="card-grid">
           {[
-            { icon: "🔒", text: "Protect your privacy – no chance of recovery." },
-            { icon: "🌱", text: "Enable safe recycling of your devices." },
-            { icon: "🛡", text: "Prevent misuse of sensitive information." },
+            { icon: "🔒", text: "Protect your privacy – no chance of recovery" },
+            { icon: "🌱", text: "Enable safe recycling of your devices" },
+            { icon: "🛡", text: "Prevent misuse of sensitive information" },
           ].map((item, index) => (
             <motion.div
               className="card"
@@ -440,11 +458,11 @@ function App() {
       <section id="benefits" data-scroll-section>
         <h2>Benefits of SecureWipe</h2>
         <ul className="benefits-list">
-          <li>🔒 Military-grade algorithms – no recovery possible.</li>
-          <li>⚡ Fast & lightweight – runs from USB.</li>
-          <li>🌍 Eco-friendly – supports safe recycling.</li>
-          <li>💻 Works without OS – independent boot tool.</li>
-          <li>🆓 Free & open-source alternative to paid tools.</li>
+          <li>🔒 Military-grade algorithms – no recovery possible</li>
+          <li>⚡ Fast & lightweight – runs from USB</li>
+          <li>🌍 Eco-friendly – supports safe recycling</li>
+          <li>💻 Works without OS – independent boot tool</li>
+          <li>🆓 Free & open-source alternative to paid tools</li>
         </ul>
       </section>
 
@@ -453,12 +471,12 @@ function App() {
         <h2>How to Create Your Bootable USB</h2>
         <ol className="guidelines-list">
           {[
-            <>⬇️ Download the SecureWipe ISO.</>,
-            <>🖴 Insert a USB (8GB+).</>,
-            <>⚙️ Use <a href="https://rufus.ie/" target="_blank" rel="noreferrer">Rufus</a> (Windows) or <a href="https://etcher.balena.io/" target="_blank" rel="noreferrer">Etcher</a> (Mac/Linux) to flash.</>,
-            <>🚀 Start flashing process.</>,
-            <>🔄 Reboot PC and boot from USB.</>,
-            <>🧹 Launch SecureWipe and wipe drives.</>,
+            <>⬇️ Download the SecureWipe ISO</>,
+            <>🖴 Insert a USB (8GB+)</>,
+            <>⚙️ Use <a href="https://rufus.ie/" target="_blank" rel="noreferrer">Rufus</a> (Windows) or <a href="https://etcher.balena.io/" target="_blank" rel="noreferrer">Etcher</a> (Mac/Linux) to flash</>,
+            <>🚀 Start flashing process</>,
+            <>🔄 Reboot PC and boot from USB</>,
+            <>🧹 Launch SecureWipe and wipe drives</>,
           ].map((step, index) => (
             <motion.li
               key={index}
@@ -550,7 +568,7 @@ function App() {
                 } catch {}
               }
               if (ok) {
-                setContactToast("Thanks! We'll get back to you shortly.");
+                setContactToast("Thanks! We'll get back to you shortly");
                 form.reset();
               } else {
                 setContactToast("Could not send message. Please try again later.");
