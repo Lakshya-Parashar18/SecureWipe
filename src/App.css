@@ -1036,6 +1036,13 @@ html, body {
     transition: opacity 0.2s ease;
   }
   
+  /* Hide custom cursor on touch/coarse pointer devices */
+  @media (pointer: coarse), (hover: none) {
+    body { cursor: auto; }
+    .cursor, .cursor-trail { display: none !important; }
+    .download-btn { cursor: pointer; }
+  }
+  
   /* Responsive */
   @media (max-width: 768px) {
     .title {
