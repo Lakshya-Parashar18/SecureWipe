@@ -110,10 +110,14 @@ html, body {
   }
   .top-nav.show { transform: translateY(0); }
   .top-nav .brand {
-    color: #fff;
     font-weight: 800;
     letter-spacing: 0.5px;
     text-decoration: none;
+    background: linear-gradient(135deg, #60a5fa, #22d3ee, #a78bfa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 14px rgba(59,130,246,0.20);
   }
   .top-nav .links {
     display: flex;
@@ -138,7 +142,7 @@ html, body {
     align-items: center;
   }
   .top-nav .scroll-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
-  .top-nav .scroll-progress-bar { height: 100%; background: linear-gradient(90deg, #60a5fa, #22d3ee, #a78bfa); box-shadow: 0 0 8px rgba(96,165,250,0.5); transition: width 120ms linear; }
+  .top-nav .scroll-progress-bar { height: 100%; background: linear-gradient(90deg, #60a5fa, #22d3ee, #a78bfa); box-shadow: 0 0 8px rgba(96,165,250,0.5); transition: width 60ms linear; }
   
   p {
     margin: 0 0 15px;
@@ -159,6 +163,8 @@ html, body {
     padding: 0 0px;
     position: relative;
     overflow: hidden;
+    will-change: transform, opacity;
+    transform-origin: center center;
   }
   
   /* Animated background: soft moving gradient blobs */
@@ -200,6 +206,7 @@ html, body {
   .title-wrap {
     position: relative;
     display: inline-block;
+    transform-style: preserve-3d;
   }
   
   .title-anim {
@@ -377,6 +384,8 @@ html, body {
     position: relative; /* for background pattern layers */
     overflow: hidden;
   }
+  
+  
 
   /* In-section cards removed */
   
@@ -859,13 +868,16 @@ html, body {
   .footer-brand .brand-mark { order: 3; margin-top: 12px; }
   .footer-socials { order: 2; margin-top: 10px; }
   
-  .footer-brand .brand-mark {
-    width: 56px;
-    height: 56px;
-    border-radius: 999px;
-    background: radial-gradient(circle at 30% 30%, #93c5fd, #3b82f6 60%, rgba(59,130,246,0.2));
-    box-shadow: 0 0 24px rgba(59,130,246,0.6);
+  .footer-brand .footer-brand-name {
+    font-weight: 900;
+    font-size: 1.6rem;
+    letter-spacing: -0.02em;
     margin-bottom: 14px;
+    background: linear-gradient(135deg, #60a5fa, #22d3ee, #a78bfa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 18px rgba(59,130,246,0.25);
   }
   
   .footer-socials a {

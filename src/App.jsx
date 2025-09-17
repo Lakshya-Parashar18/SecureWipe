@@ -11,6 +11,10 @@ function App() {
   const scrollRef = useRef(null);
   const locomotiveScrollRef = useRef(null);
   const [showNav, setShowNav] = useState(false);
+  const titleWrapRef = useRef(null);
+  const heroRef = useRef(null);
+  const heroBgRef = useRef(null);
+  const heroProgressRef = useRef(0); // smoothed progress 0..1 for hero animation
   const [backTopVisible, setBackTopVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("top");
@@ -68,6 +72,48 @@ function App() {
         if (el && el.offsetTop <= mid) current = id;
       }
       setActiveSection(current);
+
+      // Hero dashboard effect - simple and smooth
+      if (heroRef.current) {
+        const heroHeight = heroRef.current.offsetHeight || window.innerHeight;
+        const target = Math.min(Math.max(y / heroHeight, 0), 1);
+        // smooth the target to avoid stutter (one-pole low-pass)
+        const prev = heroProgressRef.current;
+        const smooth = prev + (target - prev) * 0.18;
+        heroProgressRef.current = smooth;
+
+        const eased = 1 - Math.pow(1 - smooth, 3); // easeOutCubic
+
+        const scale = 1 - (eased * 0.6);   // 1 -> 0.4
+        const translateY = -eased * 20;    // subtle up
+
+        // Opacity reaches 0 at 60% hero scroll (of smoothed progress)
+        const hideAt = 0.6;
+        const opacity = smooth < hideAt ? 1 - (smooth / hideAt) : 0;
+
+        const el = heroRef.current;
+        el.style.transform = `translateY(${translateY}px) scale(${scale})`;
+        el.style.opacity = `${opacity}`;
+        if (opacity === 0) {
+          el.style.visibility = 'hidden';
+          el.style.pointerEvents = 'none';
+          el.style.background = '#0b1220'; // force solid dark background behind content
+          if (heroBgRef.current) heroBgRef.current.style.display = 'none';
+        } else {
+          el.style.visibility = 'visible';
+          el.style.pointerEvents = 'auto';
+          el.style.background = '';
+          if (heroBgRef.current) heroBgRef.current.style.display = '';
+        }
+      }
+      
+      // Subtle background parallax
+      if (heroBgRef.current) {
+        const eased = 1 - Math.pow(1 - heroProgressRef.current, 3);
+        const bgTranslateY = eased * 8;
+        const bgScale = 1 + eased * 0.02;
+        heroBgRef.current.style.transform = `translateY(${bgTranslateY}px) scale(${bgScale})`;
+      }
     });
 
     // Refresh scroll after a short delay to ensure proper initialization
@@ -190,6 +236,73 @@ function App() {
       progressRafRef.current = 0;
     };
   }, [videoStarted, introFade]);
+
+  // Gyro-like 3D tilt on hero title wrap
+  useEffect(() => {
+    const el = titleWrapRef.current;
+    if (!el) return;
+    const maxTilt = 10; // degrees
+    const onMove = (e) => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / rect.width; // ~ -0.5..0.5
+      const dy = (e.clientY - cy) / rect.height;
+      const rx = Math.max(-1, Math.min(1, -dy)) * maxTilt;
+      const ry = Math.max(-1, Math.min(1, dx)) * maxTilt;
+      el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    };
+    const onLeave = () => { el.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg)'; };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('mouseleave', onLeave, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseleave', onLeave);
+    };
+  }, []);
+
+  // Device orientation fallback for mobile (respects reduced motion)
+  useEffect(() => {
+    const el = titleWrapRef.current;
+    if (!el) return;
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouch) return;
+
+    const maxTilt = 10;
+    let handler = null;
+
+    const startOrientation = () => {
+      if (handler) return;
+      handler = (e) => {
+        const { beta, gamma } = e; // beta: x (front-back), gamma: y (left-right)
+        if (beta == null || gamma == null) return;
+        const rx = Math.max(-maxTilt, Math.min(maxTilt, (beta / 45) * maxTilt));
+        const ry = Math.max(-maxTilt, Math.min(maxTilt, (gamma / 45) * maxTilt));
+        el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      };
+      window.addEventListener('deviceorientation', handler, true);
+    };
+
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const enable = () => {
+          DeviceOrientationEvent.requestPermission().then((state) => {
+            if (state === 'granted') startOrientation();
+          }).catch(() => {});
+          document.removeEventListener('click', enable);
+        };
+        document.addEventListener('click', enable, { once: true });
+      } else if ('DeviceOrientationEvent' in window) {
+        startOrientation();
+      }
+    } catch {}
+
+    return () => {
+      if (handler) window.removeEventListener('deviceorientation', handler, true);
+    };
+  }, []);
 
 
 
@@ -341,7 +454,7 @@ function App() {
       )}
       {/* Scroll Nav (appears on scroll) */}
       <nav className={`top-nav ${showNav ? "show" : ""}`}>
-        <a href="#top" className="brand">SecureWipe</a>
+        <a href="/" className="brand">SecureWipe</a>
         <div className="links">
           <a href="#why" className={activeSection==="why"?"active":""}>Why</a>
           <a href="#benefits" className={activeSection==="benefits"?"active":""}>Benefits</a>
@@ -354,9 +467,9 @@ function App() {
         </div>
       </nav>
       {/* Hero Section */}
-      <header className="hero" data-scroll-section>
-        <div className="animated-bg" aria-hidden="true"></div>
-        <div className="title-wrap">
+      <header className="hero" data-scroll-section ref={heroRef}>
+        <div className="animated-bg" aria-hidden="true" ref={heroBgRef}></div>
+        <div className="title-wrap" ref={titleWrapRef}>
           <motion.h1
             className="mega-headline"
             initial={{ opacity: 0, y: -30 }}
@@ -444,7 +557,7 @@ function App() {
               key={index}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.2 }}
               transition={{ delay: index * 0.2, duration: 0.6 }}
             >
               <h3>{item.icon}</h3>
@@ -482,7 +595,7 @@ function App() {
               key={index}
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.2 }}
               transition={{ delay: index * 0.2, duration: 0.5 }}
             >
               {step}
@@ -638,7 +751,7 @@ function App() {
         <h2 id="footer-heading" className="sr-only">Footer</h2>
         <div className="footer-grid">
           <div className="footer-brand">
-            <div className="brand-mark" aria-hidden="true"></div>
+            <div className="footer-brand-name" aria-label="SecureWipe">SecureWipe</div>
             <p>
               SecureWipe provides a free, open-source drive erasure tool to help
               you safely recycle or resell devices without risking your data.
