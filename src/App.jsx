@@ -18,6 +18,14 @@ function App() {
   const [backTopVisible, setBackTopVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("top");
+  const [verifyState, setVerifyState] = useState({
+    pastedJson: "",
+    uploadedFileName: "",
+    uploadedFileHash: "",
+    parsed: null,
+    status: "idle",
+    message: ""
+  });
   const [introVisible, setIntroVisible] = useState(true);
   const [introFade, setIntroFade] = useState(false);
   const [contactToast, setContactToast] = useState("");
@@ -64,7 +72,7 @@ function App() {
       const p = lim > 0 ? Math.min(1, Math.max(0, y / lim)) : 0;
       setScrollProgress(p);
       // Active section detection (based on offsetTop)
-      const sections = ["why","benefits","how","download","contact"];
+      const sections = ["why","benefits","how","verify","download","contact"];
       const mid = y + window.innerHeight * 0.35;
       let current = "top";
       for (let id of sections) {
@@ -459,6 +467,7 @@ function App() {
           <a href="#why" className={activeSection==="why"?"active":""}>Why</a>
           <a href="#benefits" className={activeSection==="benefits"?"active":""}>Benefits</a>
           <a href="#how" className={activeSection==="how"?"active":""}>Guide</a>
+          <a href="#verify" className={activeSection==="verify"?"active":""}>Verify</a>
           <a href="#contact" className={activeSection==="contact"?"active":""}>Contact</a>
           <a href="#download" className={`cta ${activeSection==="download"?"active":""}`}>Download</a>
         </div>
@@ -567,6 +576,8 @@ function App() {
         </div>
       </section>
 
+      
+
       {/* Benefits Section */}
       <section id="benefits" data-scroll-section>
         <h2>Benefits of SecureWipe</h2>
@@ -602,6 +613,121 @@ function App() {
             </motion.li>
           ))}
         </ol>
+      </section>
+
+      {/* Verify Certificate Section */}
+      <section id="verify" data-scroll-section>
+        <h2>Verify Wipe Certificate</h2>
+        <p className="verify-intro">Upload your certificate JSON or PDF, or paste the JSON below to validate integrity.</p>
+        <div className="verify-grid">
+          <div className="verify-card">
+            <div className="form-row">
+              <label htmlFor="certFile">Upload JSON or PDF</label>
+              <input
+                id="certFile"
+                type="file"
+                accept=".json,.pdf,application/json,application/pdf"
+                onChange={async (e)=>{
+                  const file = e.target.files && e.target.files[0];
+                  if (!file) return;
+                  const name = file.name;
+                  try {
+                    const buf = await file.arrayBuffer();
+                    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+                    const hashArray = Array.from(new Uint8Array(hashBuf));
+                    const hashHex = hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+                    setVerifyState(prev=>({ ...prev, uploadedFileName: name, uploadedFileHash: hashHex }));
+                    if (file.type.includes('json') || name.toLowerCase().endsWith('.json')){
+                      try {
+                        const text = new TextDecoder().decode(new Uint8Array(buf));
+                        const parsed = JSON.parse(text);
+                        setVerifyState(prev=>({ ...prev, pastedJson: text, parsed }));
+                      } catch {}
+                    }
+                  } catch (err){
+                    setVerifyState(prev=>({ ...prev, status: 'error', message: 'Could not read file' }));
+                  }
+                }}
+              />
+            </div>
+
+            <div className="form-row">
+              <label htmlFor="certJson">Paste Certificate JSON</label>
+              <textarea
+                id="certJson"
+                rows="8"
+                placeholder='{"certificateId":"...","deviceId":"...","sha256Pdf":"..."}'
+                value={verifyState.pastedJson}
+                onChange={(e)=>{
+                  const value = e.target.value;
+                  let parsed = null;
+                  try { parsed = JSON.parse(value); } catch {}
+                  setVerifyState(prev=>({ ...prev, pastedJson: value, parsed }));
+                }}
+              />
+            </div>
+
+            <div className="verify-actions">
+              <button
+                type="button"
+                className="download-btn btn-icon"
+                onClick={async ()=>{
+                  try {
+                    const parsed = verifyState.parsed;
+                    if (!parsed){
+                      setVerifyState(prev=>({ ...prev, status: 'error', message: 'No valid JSON to verify' }));
+                      return;
+                    }
+                    const required = ['certificateId','deviceId','wipedAt'];
+                    for (const k of required){ if (!(k in parsed)){ setVerifyState(prev=>({ ...prev, status: 'fail', message: `Missing field: ${k}` })); return; } }
+                    let ok = true;
+                    let msg = 'Certificate structure looks valid';
+                    if (parsed.sha256Pdf && verifyState.uploadedFileHash){
+                      if (String(parsed.sha256Pdf).toLowerCase() === verifyState.uploadedFileHash.toLowerCase()){
+                        ok = true; msg = 'SHA-256 matches uploaded PDF';
+                      } else { ok = false; msg = 'SHA-256 does not match uploaded PDF'; }
+                    } else if (parsed.sha256Json){
+                      try {
+                        const enc = new TextEncoder().encode(verifyState.pastedJson.trim());
+                        const h = await crypto.subtle.digest('SHA-256', enc);
+                        const arr = Array.from(new Uint8Array(h));
+                        const hex = arr.map(b=>b.toString(16).padStart(2,'0')).join('');
+                        ok = hex.toLowerCase() === String(parsed.sha256Json).toLowerCase();
+                        msg = ok ? 'sha256Json matches content' : 'sha256Json does not match content';
+                      } catch { ok = false; msg = 'Could not compute JSON hash'; }
+                    }
+                    setVerifyState(prev=>({ ...prev, status: ok ? 'ok' : 'fail', message: msg }));
+                  } catch {
+                    setVerifyState(prev=>({ ...prev, status: 'error', message: 'Unexpected verification error' }));
+                  }
+                }}
+              >
+                <span>Verify</span>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="verify-card">
+            <h3 className="verify-title">Result</h3>
+            <div className={`verify-result ${verifyState.status}`}>
+              {verifyState.status === 'idle' && <p>Awaiting input…</p>}
+              {verifyState.status !== 'idle' && <p>{verifyState.message}</p>}
+              {verifyState.uploadedFileName && (
+                <p className="verify-detail"><strong>File:</strong> {verifyState.uploadedFileName}</p>
+              )}
+              {verifyState.uploadedFileHash && (
+                <p className="verify-detail monospace"><strong>SHA-256:</strong> {verifyState.uploadedFileHash}</p>
+              )}
+              {verifyState.parsed && (
+                <div className="verify-json">
+                  <pre>{JSON.stringify(verifyState.parsed, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <p className="verify-disclaimer">Note: This client-side check validates structure and hashes. For signature verification, connect this to your public key infrastructure.</p>
       </section>
 
       {/* Download Section */}
@@ -640,7 +766,27 @@ function App() {
             <rect x="1" y="1" width="98" height="38" rx="12" ry="12" fill="none" stroke="url(#outlineGradDl)" strokeWidth="3" filter="url(#btnGlowDl)" pathLength="100"/>
           </svg>
         </motion.a>
-        <p className="checksum">Version 1.0 | SHA256: abc123xyz...</p>
+        <p className="checksum">
+          Version 2.0 | SHA256: 
+          <code className="hash" title="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855">E3B0C442...</code>
+          <button
+            type="button"
+            className="copy-hash"
+            onClick={async ()=>{
+              const text = 'E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855';
+              try {
+                await navigator.clipboard.writeText(text);
+              } catch {
+                const ta = document.createElement('textarea');
+                ta.value = text; document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy'); } catch {}
+                ta.remove();
+              }
+            }}
+            aria-label="Copy SHA-256"
+            title="Copy SHA-256"
+          >Copy</button>
+        </p>
       </section>
 
       {/* Contact Section */}
@@ -776,9 +922,9 @@ function App() {
           <div className="footer-col">
             <h3 className="footer-title">Legal</h3>
             <ul>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>Privacy Policy</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>Terms of Service</a></li>
-              <li><a href="#" onClick={(e)=>e.preventDefault()}>Cookie Policy</a></li>
+              <li><a href="/privacy-policy.html">Privacy Policy</a></li>
+              <li><a href="/terms-of-service.html">Terms of Service</a></li>
+              <li><a href="/cookie-policy.html">Cookie Policy</a></li>
             </ul>
           </div>
 

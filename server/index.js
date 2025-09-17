@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import jwt from 'jsonwebtoken';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
@@ -17,6 +18,7 @@ app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || true }));
 app.use(express.json());
 app.use(morgan('tiny'));
+app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), '../public')));
 
 app.get('/healthz', (req, res) => {
   res.status(200).json({ ok: true, uptime: process.uptime() });
@@ -89,10 +91,83 @@ app.post('/api/contact', async (req, res) => {
       html
     });
 
+    // Persist a copy server-side for admin view
+    try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const storePath = path.join(__dirname, 'messages.json');
+      let list = [];
+      if (fs.existsSync(storePath)) {
+        try { list = JSON.parse(fs.readFileSync(storePath, 'utf-8')); } catch {}
+      }
+      list.push({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        ts: new Date().toISOString(),
+        name, email, phone: phone || '', subject, message, ip
+      });
+      fs.writeFileSync(storePath, JSON.stringify(list, null, 2));
+    } catch (e) {
+      console.error('messages_store_error', e);
+    }
+
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('contact_error', e);
     return res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// --- Admin endpoints ---
+function requireAuth(req, res, next){
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
+    req.user = payload;
+    return next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body || {};
+  const u = process.env.ADMIN_USER;
+  const p = process.env.ADMIN_PASS;
+  if (!u || !p) return res.status(500).json({ error: 'Admin credentials not configured' });
+  if (username !== u || password !== p) return res.status(401).json({ error: 'Invalid credentials' });
+  const token = jwt.sign({ sub: u, role: 'admin' }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '12h' });
+  res.json({ token });
+});
+
+app.get('/api/admin/messages', requireAuth, (req, res) => {
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const storePath = path.join(__dirname, 'messages.json');
+    if (!fs.existsSync(storePath)) return res.json([]);
+    const list = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+    res.json(list.slice().reverse());
+  } catch (e) {
+    console.error('messages_read_error', e);
+    res.status(500).json({ error: 'Failed to read messages' });
+  }
+});
+
+app.delete('/api/admin/messages/:id', requireAuth, (req, res) => {
+  try {
+    const id = req.params.id;
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const storePath = path.join(__dirname, 'messages.json');
+    const list = fs.existsSync(storePath) ? JSON.parse(fs.readFileSync(storePath, 'utf-8')) : [];
+    const next = list.filter(m => m.id !== id);
+    fs.writeFileSync(storePath, JSON.stringify(next, null, 2));
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('messages_delete_error', e);
+    res.status(500).json({ error: 'Failed to delete message' });
   }
 });
 app.get('/api/releases/latest', (req, res) => {
