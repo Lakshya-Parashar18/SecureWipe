@@ -990,7 +990,14 @@ html, body {
   .verify-result.error { border-color: rgba(234,179,8,0.6); box-shadow: 0 0 0 2px rgba(234,179,8,0.14) inset; }
   .verify-detail { color: #cbd5e1; margin: 6px 0 0; }
   .verify-detail.monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.95rem; word-break: break-all; }
-  .verify-json { margin-top: 10px; max-height: 320px; overflow: auto; }
+  .verify-json { margin-top: 10px; max-height: 320px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  /* Always-visible scrollbar styling for the verify JSON panel */
+  .verify-json { scrollbar-gutter: stable; }
+  .verify-json::-webkit-scrollbar { width: 10px; height: 10px; }
+  .verify-json::-webkit-scrollbar-track { background: rgba(255,255,255,0.07); border-radius: 8px; }
+  .verify-json::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.55); border-radius: 8px; }
+  .verify-json::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.8); }
+  .verify-json { scrollbar-color: rgba(148,163,184,0.7) rgba(255,255,255,0.07); scrollbar-width: thin; }
   .verify-json pre { margin: 0; color: #e5e7eb; }
   
   .footer-bottom {
