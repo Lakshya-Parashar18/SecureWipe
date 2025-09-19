@@ -103,12 +103,16 @@ html, body {
     backdrop-filter: blur(8px);
     border-bottom: 1px solid rgba(255,255,255,0.08);
     z-index: 1000;
-    transform: translateY(-100%);
-    transition: transform 0.35s ease, background 0.3s ease;
     overflow: visible; /* prevent CTA clipping at edges */
-    will-change: transform;
+    will-change: transform, opacity;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: transform 0.35s ease, background 0.3s ease, opacity 0.35s ease;
   }
-  .top-nav.show { transform: translateY(0); }
+  .top-nav.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
   .top-nav .brand {
     font-weight: 800;
     letter-spacing: 0.5px;
@@ -133,6 +137,20 @@ html, body {
   .top-nav .links a:hover { color: #fff; }
   .top-nav .links a.active { color: #fff; position: relative; }
   .top-nav .links a.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; background: linear-gradient(90deg, #60a5fa, #22d3ee, #a78bfa); border-radius: 999px; }
+  .top-nav .links .auth-link {
+    background: rgba(96, 165, 250, 0.1);
+    color: #60a5fa;
+    padding: 8px 14px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    transition: all 0.3s ease;
+  }
+  .top-nav .links .auth-link:hover {
+    background: rgba(96, 165, 250, 0.2);
+    border-color: rgba(96, 165, 250, 0.5);
+  }
   .top-nav .links .cta {
     background: #2563eb;
     color: #fff;

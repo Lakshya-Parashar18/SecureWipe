@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructions - SecureWipe</title>
+    <link rel="stylesheet" href="/src/index.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #0b1220 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .instructions-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 0.5rem;
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+
+        .back-btn:hover {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: rgba(96, 165, 250, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .instructions-grid {
+            display: grid;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .instruction-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .instruction-section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            margin-bottom: 1.5rem;
+            padding-left: 3rem;
+            position: relative;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        .step-list li strong {
+            color: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .step-list li code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            color: #22d3ee;
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .warning-box h3 {
+            color: #fca5a5;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-box {
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .info-box h3 {
+            color: #67e8f9;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .download-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .download-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 0.75rem;
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .download-link:hover {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: rgba(96, 165, 250, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .troubleshooting {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .troubleshooting h2 {
+            color: #fbbf24;
+            margin-bottom: 1.5rem;
+        }
+
+        .troubleshooting ul {
+            list-style: none;
+        }
+
+        .troubleshooting li {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .troubleshooting li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .instructions-container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .instruction-section {
+                padding: 1.5rem;
+            }
+
+            .step-list li {
+                padding-left: 2.5rem;
+            }
+
+            .step-list li::before {
+                width: 1.5rem;
+                height: 1.5rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions-container">
+        <a href="/" class="back-btn">
+            ← Back to SecureWipe
+        </a>
+
+        <div class="header">
+            <h1>SecureWipe Instructions</h1>
+            <p>Complete guide to securely erasing your drives and protecting your data</p>
+        </div>
+
+        <div class="instructions-grid">
+            <!-- Preparation Section -->
+            <div class="instruction-section">
+                <h2>📋 Preparation</h2>
+                <ol class="step-list">
+                    <li>
+                        <strong>Backup Important Data:</strong> Before proceeding, ensure you have backed up any important data you want to keep. SecureWipe will permanently destroy all data on the selected drives.
+                    </li>
+                    <li>
+                        <strong>Gather Required Materials:</strong>
+                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li>USB drive (8GB or larger)</li>
+                            <li>Computer with internet connection</li>
+                            <li>Target computer with drives to wipe</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Download Required Tools:</strong> You'll need either Rufus (Windows) or Etcher (Mac/Linux) to create the bootable USB.
+                    </li>
+                </ol>
+            </div>
+
+            <!-- Download Section -->
+            <div class="instruction-section">
+                <h2>⬇️ Download & Setup</h2>
+                <ol class="step-list">
+                    <li>
+                        <strong>Download SecureWipe ISO:</strong> Get the latest version from our download page.
+                    </li>
+                    <li>
+                        <strong>Download USB Creation Tool:</strong>
+                        <div class="download-links">
+                            <a href="https://rufus.ie/" target="_blank" class="download-link">
+                                <span>🪟</span>
+                                <span>Rufus (Windows)</span>
+                            </a>
+                            <a href="https://etcher.balena.io/" target="_blank" class="download-link">
+                                <span>🍎</span>
+                                <span>Etcher (Mac/Linux)</span>
+                            </a>
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Verify Download:</strong> Check the SHA-256 hash to ensure file integrity:
+                        <code>E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855</code>
+                    </li>
+                </ol>
+            </div>
+
+            <!-- USB Creation Section -->
+            <div class="instruction-section">
+                <h2>🖴 Create Bootable USB</h2>
+                <ol class="step-list">
+                    <li>
+                        <strong>Insert USB Drive:</strong> Connect your USB drive to your computer. Note: All data on the USB will be erased.
+                    </li>
+                    <li>
+                        <strong>Launch USB Tool:</strong> Open Rufus (Windows) or Etcher (Mac/Linux).
+                    </li>
+                    <li>
+                        <strong>Select ISO File:</strong> Choose the SecureWipe ISO file you downloaded.
+                    </li>
+                    <li>
+                        <strong>Select USB Drive:</strong> Choose your USB drive from the list.
+                    </li>
+                    <li>
+                        <strong>Start Flashing:</strong> Click "Start" (Rufus) or "Flash!" (Etcher) and wait for completion.
+                    </li>
+                </ol>
+
+                <div class="info-box">
+                    <h3>💡 Pro Tip</h3>
+                    <p>For Rufus users: Use the default settings (MBR partition scheme, FAT32 file system). For Etcher users: The tool will automatically configure the USB correctly.</p>
+                </div>
+            </div>
+
+            <!-- Booting Section -->
+            <div class="instruction-section">
+                <h2>🚀 Boot from USB</h2>
+                <ol class="step-list">
+                    <li>
+                        <strong>Insert USB:</strong> Plug the bootable USB into the computer with drives you want to wipe.
+                    </li>
+                    <li>
+                        <strong>Access Boot Menu:</strong> Restart the computer and press the boot menu key during startup:
+                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li>Dell: F12</li>
+                            <li>HP: F9 or Esc</li>
+                            <li>Lenovo: F12 or F1</li>
+                            <li>ASUS: F8 or Esc</li>
+                            <li>Mac: Hold Option key during startup</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Select USB:</strong> Choose your USB drive from the boot menu.
+                    </li>
+                    <li>
+                        <strong>Wait for Boot:</strong> SecureWipe will load automatically. This may take a few minutes.
+                    </li>
+                </ol>
+
+                <div class="warning-box">
+                    <h3>⚠️ Important</h3>
+                    <p>Make sure to select the correct USB drive. Booting from the wrong drive could cause issues with your system.</p>
+                </div>
+            </div>
+
+            <!-- Wiping Process Section -->
+            <div class="instruction-section">
+                <h2>🧹 Wipe Your Drives</h2>
+                <ol class="step-list">
+                    <li>
+                        <strong>Launch SecureWipe:</strong> Once booted, the SecureWipe interface will appear automatically.
+                    </li>
+                    <li>
+                        <strong>Select Drives:</strong> Carefully select the drives you want to wipe. Double-check to avoid wiping the wrong drives.
+                    </li>
+                    <li>
+                        <strong>Choose Wipe Method:</strong> Select your preferred wiping algorithm:
+                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li><strong>Quick Wipe:</strong> Single pass, faster (for non-sensitive data)</li>
+                            <li><strong>Secure Wipe:</strong> Multiple passes, more thorough (recommended)</li>
+                            <li><strong>Military Grade:</strong> Maximum security, slower (for highly sensitive data)</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Confirm Action:</strong> Review your selections and confirm to start the wiping process.
+                    </li>
+                    <li>
+                        <strong>Wait for Completion:</strong> The process may take several hours depending on drive size and method chosen.
+                    </li>
+                    <li>
+                        <strong>Generate Certificate:</strong> After completion, SecureWipe will generate a certificate proving the wipe was successful.
+                    </li>
+                </ol>
+
+                <div class="info-box">
+                    <h3>📊 Process Times</h3>
+                    <p>Approximate times for a 1TB drive: Quick Wipe (30 minutes), Secure Wipe (2-3 hours), Military Grade (6-8 hours). Times vary based on drive speed and computer performance.</p>
+                </div>
+            </div>
+
+            <!-- Certificate Section -->
+            <div class="instruction-section">
+                <h2>📜 Certificate & Verification</h2>
+                <ol class="step-list">
+                    <li>
+                        <strong>Save Certificate:</strong> The wipe certificate will be saved to your USB drive. This proves the wipe was completed successfully.
+                    </li>
+                    <li>
+                        <strong>Verify Certificate:</strong> Use our online verification tool to validate the certificate's authenticity.
+                    </li>
+                    <li>
+                        <strong>Store Safely:</strong> Keep the certificate in a safe place as proof of secure data destruction.
+                    </li>
+                    <li>
+                        <strong>Recycle Responsibly:</strong> Now you can safely recycle or resell your device without worrying about data recovery.
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Troubleshooting Section -->
+        <div class="troubleshooting">
+            <h2>🔧 Troubleshooting</h2>
+            <ul>
+                <li><strong>USB won't boot:</strong> Try recreating the USB with different settings or use a different USB drive.</li>
+                <li><strong>Boot menu not appearing:</strong> Check BIOS settings to enable USB boot or try different boot keys.</li>
+                <li><strong>SecureWipe won't start:</strong> Ensure your computer supports UEFI/Legacy boot and try different boot modes.</li>
+                <li><strong>Drive not detected:</strong> Check drive connections and ensure drives are properly powered.</li>
+                <li><strong>Wipe process stuck:</strong> Wait longer (large drives take time) or restart and try a different wipe method.</li>
+                <li><strong>Certificate not generated:</strong> Ensure USB has enough free space and try the process again.</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 3rem; padding: 2rem; background: rgba(255, 255, 255, 0.05); border-radius: 1rem;">
+            <h3 style="color: #f1f5f9; margin-bottom: 1rem;">Need More Help?</h3>
+            <p style="color: #94a3b8; margin-bottom: 1.5rem;">If you encounter any issues not covered here, please contact our support team.</p>
+            <a href="/#contact" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #60a5fa, #a78bfa); border-radius: 0.5rem; color: white; text-decoration: none; font-weight: 500; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                Contact Support
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -11,13 +11,14 @@ function App() {
   const scrollRef = useRef(null);
   const locomotiveScrollRef = useRef(null);
   const [showNav, setShowNav] = useState(false);
+  console.log('Current showNav state:', showNav); // Debug log
   const titleWrapRef = useRef(null);
   const heroRef = useRef(null);
   const heroBgRef = useRef(null);
   const heroProgressRef = useRef(0); // smoothed progress 0..1 for hero animation
-  const [backTopVisible, setBackTopVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("top");
+  const [backTopVisible, setBackTopVisible] = useState(false);
   const [verifyState, setVerifyState] = useState({
     pastedJson: "",
     uploadedFileName: "",
@@ -26,7 +27,7 @@ function App() {
     status: "idle",
     message: ""
   });
-  const [introVisible, setIntroVisible] = useState(true);
+  const [introVisible, setIntroVisible] = useState(false);
   const [introFade, setIntroFade] = useState(false);
   const [contactToast, setContactToast] = useState("");
   const videoRef = useRef(null);
@@ -36,6 +37,20 @@ function App() {
 
   // Load site public key (PEM) if available at /public-key.pem
   const [sitePublicKeyPem, setSitePublicKeyPem] = useState("");
+
+  // Check if this is first visit or refresh to show intro video
+  useEffect(() => {
+    const hasSeenIntro = sessionStorage.getItem('securewipe-intro-seen');
+    const isRefresh = performance.navigation && performance.navigation.type === 1;
+    const isPageReload = performance.getEntriesByType('navigation')[0]?.type === 'reload';
+    const isFromInstructions = document.referrer.includes('instructions.html');
+    
+    // Show intro on first visit or refresh/reload, but not when returning from instructions
+    if ((!hasSeenIntro || isRefresh || isPageReload) && !isFromInstructions) {
+      setIntroVisible(true);
+      sessionStorage.setItem('securewipe-intro-seen', 'true');
+    }
+  }, []);
 
   // --- Helpers for extracting certificate and verifying signatures ---
   function base64ToArrayBuffer(b64) {
@@ -275,40 +290,59 @@ function App() {
 
   useEffect(() => {
     if (introVisible) return; // wait for overlay to finish
-    locomotiveScrollRef.current = new LocomotiveScroll({
-      el: scrollRef.current,
-      smooth: true,
-      multiplier: 1.15, // Overall speed scalar for wheel input
-      class: 'is-revealed',
-      scrollbarContainer: false,
-      lerp: 0.08, // Inertia: lower is smoother/longer, higher is tighter
-      direction: 'vertical',
-      gestureDirection: 'vertical',
-      smoothMobile: true,
-      smartphone: {
+    
+    // Add a small delay for smoother initialization
+    const initScroll = () => {
+      locomotiveScrollRef.current = new LocomotiveScroll({
+        el: scrollRef.current,
         smooth: true,
-        lerp: 0.1,
-        multiplier: 1.0
-      },
-      tablet: {
-        smooth: true,
-        lerp: 0.1,
-        multiplier: 1.1
-      },
-      reloadOnResize: true,
-      resetNativeScroll: false,
-      touchMultiplier: 2.0
-    });
+        multiplier: 1.15, // Overall speed scalar for wheel input
+        class: 'is-revealed',
+        scrollbarContainer: false,
+        lerp: 0.06, // Smoother inertia
+        direction: 'vertical',
+        gestureDirection: 'vertical',
+        smoothMobile: true,
+        smartphone: {
+          smooth: true,
+          lerp: 0.08,
+          multiplier: 1.0
+        },
+        tablet: {
+          smooth: true,
+          lerp: 0.08,
+          multiplier: 1.1
+        },
+        reloadOnResize: true,
+        resetNativeScroll: false,
+        touchMultiplier: 2.0
+      });
+    };
+    
+    // Initialize with a slight delay for smoother transitions
+    const timeoutId = setTimeout(initScroll, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [introVisible]);
 
-    // Update nav visibility based on scroll position
-    locomotiveScrollRef.current.on('scroll', (instance) => {
+  // Set up LocomotiveScroll for smooth scrolling (without nav control)
+  useEffect(() => {
+    if (!locomotiveScrollRef.current) return;
+
+    const handleScroll = (instance) => {
       const y = instance.scroll.y;
-      setShowNav(y > 120);
-      setBackTopVisible(y > 600);
       // Progress across page
       const lim = instance.limit && typeof instance.limit.y === 'number' ? instance.limit.y : document.body.scrollHeight - window.innerHeight;
       const p = lim > 0 ? Math.min(1, Math.max(0, y / lim)) : 0;
       setScrollProgress(p);
+      // Show nav only after scrolling past most of the hero
+      const heroHeight = heroRef.current ? (heroRef.current.offsetHeight || window.innerHeight) : window.innerHeight;
+      const dynamicThreshold = heroHeight * 0.6;
+      const fixedThreshold = 120;
+      const threshold = Math.min(dynamicThreshold, fixedThreshold);
+      const show = y > threshold;
+      setShowNav(show);
+      setBackTopVisible(y > Math.max(heroHeight, 600));
       // Active section detection (based on offsetTop)
       const sections = ["why","benefits","how","verify","download","contact"];
       const mid = y + window.innerHeight * 0.35;
@@ -360,7 +394,9 @@ function App() {
         const bgScale = 1 + eased * 0.02;
         heroBgRef.current.style.transform = `translateY(${bgTranslateY}px) scale(${bgScale})`;
       }
-    });
+    };
+
+    locomotiveScrollRef.current.on('scroll', handleScroll);
 
     // Refresh scroll after a short delay to ensure proper initialization
     setTimeout(() => {
@@ -392,7 +428,33 @@ function App() {
       }
       document.removeEventListener('click', onNavClick);
     };
-  }, [introVisible]);
+  }, [locomotiveScrollRef.current]);
+
+  // Primary scroll handler for navigation and back-to-top button
+  // Only attach window scroll fallback when smooth scroll is NOT initialized
+  useEffect(() => {
+    if (locomotiveScrollRef.current) {
+      return; // LocomotiveScroll drives visibility elsewhere
+    }
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      const heroHeight = heroRef.current ? (heroRef.current.offsetHeight || window.innerHeight) : window.innerHeight;
+      const dynamicThreshold = heroHeight * 0.6;
+      const fixedThreshold = 120;
+      const threshold = Math.min(dynamicThreshold, fixedThreshold);
+      const show = scrollY > threshold;
+      setShowNav(show);
+      setBackTopVisible(scrollY > Math.max(heroHeight, 600));
+      console.log('Scroll Y:', scrollY, 'Show Nav after threshold?', show);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [locomotiveScrollRef.current]);
 
   // Autoplay overlay video on load with user-interaction fallback
   useEffect(() => {
@@ -642,7 +704,26 @@ function App() {
   }, []);
 
   return (
-    <div ref={scrollRef} data-scroll-container className="app">
+    <div className="app">
+      {/* Global Nav outside scroll container */}
+      <nav className={`top-nav ${showNav ? "show" : ""}`}>
+        <a href="/" className="brand">SecureWipe</a>
+        <div className="links">
+          <a href="#why" className={activeSection==="why"?"active":""}>Why</a>
+          <a href="#benefits" className={activeSection==="benefits"?"active":""}>Benefits</a>
+          <a href="#how" className={activeSection==="how"?"active":""}>Guide</a>
+          <a href="/instructions.html" target="_blank" rel="noopener noreferrer">Instructions</a>
+          <a href="#verify" className={activeSection==="verify"?"active":""}>Verify</a>
+          <a href="#contact" className={activeSection==="contact"?"active":""}>Contact</a>
+          <a href="/auth.html" className="auth-link">Sign In</a>
+          <a href="#download" className={`cta ${activeSection==="download"?"active":""}`}>Download</a>
+        </div>
+        <div className="scroll-progress" aria-hidden="true">
+          <div className="scroll-progress-bar" style={{ width: `${scrollProgress*100}%` }} />
+        </div>
+      </nav>
+
+      <div ref={scrollRef} data-scroll-container>
       <span id="top" aria-hidden="true"></span>
       
       
@@ -652,6 +733,9 @@ function App() {
           className={`intro-overlay${introFade ? " hidden" : ""}${videoStarted ? " started" : ""}`}
           onTransitionEnd={(e) => {
             if (introFade && e.target === e.currentTarget) setIntroVisible(false);
+          }}
+          style={{
+            transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           <div className="intro-box">
@@ -698,21 +782,7 @@ function App() {
           </div>
         </div>
       )}
-      {/* Scroll Nav (appears on scroll) */}
-      <nav className={`top-nav ${showNav ? "show" : ""}`}>
-        <a href="/" className="brand">SecureWipe</a>
-        <div className="links">
-          <a href="#why" className={activeSection==="why"?"active":""}>Why</a>
-          <a href="#benefits" className={activeSection==="benefits"?"active":""}>Benefits</a>
-          <a href="#how" className={activeSection==="how"?"active":""}>Guide</a>
-          <a href="#verify" className={activeSection==="verify"?"active":""}>Verify</a>
-          <a href="#contact" className={activeSection==="contact"?"active":""}>Contact</a>
-          <a href="#download" className={`cta ${activeSection==="download"?"active":""}`}>Download</a>
-        </div>
-        <div className="scroll-progress" aria-hidden="true">
-          <div className="scroll-progress-bar" style={{ width: `${scrollProgress*100}%` }} />
-        </div>
-      </nav>
+      
       {/* Hero Section */}
       <header className="hero" data-scroll-section ref={heroRef}>
         <div className="animated-bg" aria-hidden="true" ref={heroBgRef}></div>
@@ -1172,6 +1242,7 @@ function App() {
               <li><a href="#why">Why</a></li>
               <li><a href="#benefits">Benefits</a></li>
               <li><a href="#how">Guide</a></li>
+              <li><a href="/instructions.html" target="_blank" rel="noopener noreferrer">Instructions</a></li>
               <li><a href="#contact">Contact</a></li>
               <li><a href="#download">Download</a></li>
             </ul>
@@ -1209,6 +1280,7 @@ function App() {
           <p>SecureWipe • Anywhere on Earth</p>
         </div>
       </footer>
+      </div>
       {/* Custom Cursor */}
       <div ref={cursorRef} className="cursor"></div>
       {/* Back to top chip */}
